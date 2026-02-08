@@ -32,7 +32,7 @@ export interface User {
 
 export interface Order {
   id: string;
-  userId: string;
+  userId?: string; // Optional for guest checkout
   userName: string;
   userEmail?: string;
   productId: string;
