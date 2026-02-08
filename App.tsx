@@ -181,12 +181,16 @@ const App: React.FC = () => {
       if (session) {
         const isAdminEmail = session.user.email?.toLowerCase() === 'asmar1samar2@gmail.com';
         
-        // Fetch Profile
-        let { data: profile, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        
-        if (error && error.code === '42P01') {
-           setDbError("يرجى إنشاء جداول قاعدة البيانات أولاً (انظر supabase.ts)");
-           return;
+        // Try to fetch profile
+        let profile = null;
+        try {
+            const { data, error } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+            if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found" - acceptable here
+                console.warn("Profile fetch error:", error);
+            }
+            profile = data;
+        } catch (e) {
+            console.error("Unexpected profile fetch error", e);
         }
 
         // If profile doesn't exist, create it (Robust Fallback)
@@ -207,33 +211,41 @@ const App: React.FC = () => {
             wishlist_data: []
           };
 
-          // Attempt creation
-          let { data: createdProfile, error: createErr } = await supabase.from('profiles').upsert(newProfile).select().single();
-          
-          // Handle Username Collision (Unique Constraint - Code 23505)
-          if (createErr && createErr.code === '23505') {
-             const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-             newProfile.username = `${baseUsername}_${randomSuffix}`;
-             const retry = await supabase.from('profiles').upsert(newProfile).select().single();
-             if (retry.data) createdProfile = retry.data;
-             if (retry.error) createErr = retry.error;
-          }
+          try {
+            // Attempt creation
+            let { data: createdProfile, error: createErr } = await supabase.from('profiles').upsert(newProfile).select().single();
+            
+            // Handle Username Collision (Unique Constraint - Code 23505)
+            if (createErr && createErr.code === '23505') {
+               const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+               newProfile.username = `${baseUsername}_${randomSuffix}`;
+               const retry = await supabase.from('profiles').upsert(newProfile).select().single();
+               if (retry.data) createdProfile = retry.data;
+               if (retry.error) createErr = retry.error;
+            }
 
-          if (createErr) console.error("Create profile failed:", createErr);
-          profile = createdProfile || newProfile;
+            if (createErr) {
+                console.error("Create profile failed:", createErr);
+                // Fallback to local object so user can at least proceed
+                profile = newProfile;
+            } else {
+                profile = createdProfile || newProfile;
+            }
+          } catch (e) {
+              console.error("Profile creation exception", e);
+              profile = newProfile;
+          }
         }
 
         if (profile) {
           // Fix camelCase keys for profile usage if needed
           if (profile.isbanned !== undefined) profile.isBanned = profile.isbanned;
 
-          // CRITICAL FIX: Enforce Admin Role if email matches, even if profile existed previously as USER
+          // CRITICAL FIX: Enforce Admin Role if email matches
           if (isAdminEmail && profile.role !== 'ADMIN') {
-              console.log("System: Upgrading user to ADMIN role...");
-              const { error: upgradeError } = await supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', session.user.id);
-              if (!upgradeError) {
-                  profile.role = 'ADMIN';
-              }
+              // Try update DB but don't block
+              supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', session.user.id).then(() => {});
+              profile.role = 'ADMIN';
           }
 
           if (profile.isBanned) {
@@ -252,7 +264,6 @@ const App: React.FC = () => {
 
             setCart(prevLocal => {
               const combined = [...prevLocal, ...serverCart];
-              // Remove duplicates by ID
               const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
               return unique;
             });
@@ -262,7 +273,6 @@ const App: React.FC = () => {
               return [...new Set(combined)];
             });
 
-            // Allow normal syncing after hydration
             setTimeout(() => { isHydratingFromDB.current = false; }, 500);
           }
         }
@@ -275,7 +285,6 @@ const App: React.FC = () => {
   }, [fetchInitialData, fetchNotifications]);
 
   const handleLogout = async () => {
-    // Before logout, ensure final sync (best effort)
     if (currentUser) {
         await Promise.all([
             supabase.from('profiles').update({ cart_data: cart }).eq('id', currentUser.id),
@@ -320,7 +329,6 @@ const App: React.FC = () => {
     navigate('/shop', { state: { openCheckout: true } });
   };
 
-  // Close mobile menu when route changes
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location]);
@@ -336,7 +344,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Show Fatal DB Error if tables are missing
   if (dbError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4">
@@ -376,11 +383,7 @@ const App: React.FC = () => {
             {currentUser?.role === 'ADMIN' && <Link to="/admin" className="font-bold text-gray-300 px-4 py-2 hover:text-blue-500 transition-colors">{t('nav_admin')}</Link>}
             
             <div className={`flex items-center gap-3 ${dir === 'rtl' ? 'mr-4 pl-4 border-l' : 'ml-4 pr-4 border-r'} border-gray-800`}>
-               {/* Language Toggle */}
-               <button 
-                onClick={toggleLanguage}
-                className="p-2.5 rounded-xl bg-[#151515] text-gray-400 hover:bg-gray-800 transition-all border border-transparent hover:border-gray-700 flex items-center gap-2 font-bold text-xs"
-               >
+               <button onClick={toggleLanguage} className="p-2.5 rounded-xl bg-[#151515] text-gray-400 hover:bg-gray-800 transition-all border border-transparent hover:border-gray-700 flex items-center gap-2 font-bold text-xs">
                  <Globe size={18} />
                  <span>{language === 'ar' ? 'EN' : 'عربي'}</span>
                </button>
@@ -426,7 +429,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-40 bg-black/90 backdrop-blur-md pt-24 px-6 md:hidden animate-in fade-in slide-in-from-top-10">
            <div className="flex flex-col gap-6 text-center text-xl font-black">
@@ -448,7 +450,6 @@ const App: React.FC = () => {
                  </button>
               )}
 
-              {/* Mobile Social Icons */}
               <div className="flex justify-center gap-6 mt-8">
                   <a href="https://www.instagram.com/bloxstore87?igsh=MWh4bTM0d3I0OTgwcA==" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#111] rounded-full flex items-center justify-center text-pink-500 border border-gray-800"><Instagram size={20} /></a>
                   <a href="https://tiktok.com/@blox.store92" target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-[#111] rounded-full flex items-center justify-center text-white border border-gray-800"><TikTokIcon size={20} /></a>
@@ -457,7 +458,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Cart Drawer - Dark Mode */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setIsCartOpen(false)}>
           <div className={`absolute top-0 ${dir === 'rtl' ? 'left-0 border-r' : 'right-0 border-l'} h-full w-full max-w-md bg-[#0a0a0a] shadow-2xl border-gray-800 animate-in ${dir === 'rtl' ? 'slide-in-from-left' : 'slide-in-from-right'} duration-300`} onClick={e => e.stopPropagation()}>
@@ -532,7 +532,6 @@ const App: React.FC = () => {
       </main>
 
       <footer className="bg-[#050505] border-t border-blue-900/20 py-12 text-center text-gray-500 text-xs">
-        {/* Footer Social Icons */}
         <div className="flex justify-center gap-4 mb-8">
             <a href="https://www.instagram.com/bloxstore87?igsh=MWh4bTM0d3I0OTgwcA==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#111] rounded-xl flex items-center justify-center text-pink-500 hover:scale-110 transition-all border border-gray-800 hover:border-pink-500/50 shadow-sm hover:shadow-[0_0_15px_rgba(236,72,153,0.2)]">
                 <Instagram size={20} />
@@ -553,7 +552,6 @@ const App: React.FC = () => {
   );
 };
 
-// Auth Component - Dark Mode
 const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: User | null }> = ({ setCurrentUser, currentUser }) => {
   const { t, dir } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
@@ -564,7 +562,6 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
       navigate('/shop', { replace: true });
@@ -578,14 +575,16 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
     
     try {
       if (isLogin) {
-        // Trim inputs to avoid spaces causing errors
         const { data, error: loginErr } = await supabase.auth.signInWithPassword({ 
             email: email.trim(), 
             password: password.trim() 
         });
         
         if (loginErr) throw loginErr;
-        // Success handled by onAuthStateChange in App.tsx
+        
+        if (data.session) {
+           navigate('/shop', { replace: true });
+        }
       } else {
         const { data: signupData, error: signupErr } = await supabase.auth.signUp({ 
           email: email.trim(), 
@@ -597,17 +596,15 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
         
         if (signupData.user) {
           alert(t('auth_success'));
-          
-          if (!signupData.session) {
-             // If email confirmation is required, stay on login
+          if (signupData.session) {
+             navigate('/shop', { replace: true });
+          } else {
              setIsLogin(true); 
           }
-          // If session exists (auto-login), navigation handled by useEffect when currentUser updates
         }
       }
     } catch (err: any) {
       console.error("Auth Error:", err);
-      // Translate common error messages
       let msg = err.message;
       if (msg === "Invalid login credentials") msg = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
       if (msg?.includes("already registered")) msg = "هذا البريد الإلكتروني مسجل بالفعل";
