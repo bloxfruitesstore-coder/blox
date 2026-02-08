@@ -119,7 +119,6 @@ const App: React.FC = () => {
       }
 
       // Merge Logic: Combine Initial Products with DB Products
-      // This ensures new fruits from constants.tsx show up even if DB is empty or has old data
       if (pData) {
         const mappedProducts = pData.map((p: any) => ({
             ...p,
@@ -139,7 +138,6 @@ const App: React.FC = () => {
 
         setProducts(Array.from(combinedMap.values()));
       } else {
-        // Fallback if DB fetch failed completely but no fatal error
         setProducts(INITIAL_PRODUCTS);
       }
 
@@ -156,7 +154,6 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Error loading data from Supabase (or timeout):", err);
-      // In case of error, still try to show initial products so shop isn't empty
       setProducts(INITIAL_PRODUCTS);
     } finally {
       setIsLoading(false);
@@ -195,13 +192,14 @@ const App: React.FC = () => {
         // If profile doesn't exist, create it (Robust Fallback)
         if (!profile) {
           console.log("Profile missing on auth change, creating...");
-          const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-          const baseName = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'Player';
-          const safeUsername = `${baseName}_${randomSuffix}`;
           
-          const newProfile = {
+          const metadataUsername = session.user.user_metadata?.username;
+          const emailBase = session.user.email?.split('@')[0] || 'Player';
+          const baseUsername = metadataUsername || emailBase;
+          
+          let newProfile = {
             id: session.user.id, 
-            username: safeUsername, 
+            username: baseUsername, 
             email: session.user.email, 
             role: isAdminEmail ? 'ADMIN' : 'USER', 
             isBanned: false,
@@ -209,13 +207,24 @@ const App: React.FC = () => {
             wishlist_data: []
           };
 
-          const { data: createdProfile, error: createErr } = await supabase.from('profiles').upsert(newProfile).select().single();
+          // Attempt creation
+          let { data: createdProfile, error: createErr } = await supabase.from('profiles').upsert(newProfile).select().single();
+          
+          // Handle Username Collision (Unique Constraint - Code 23505)
+          if (createErr && createErr.code === '23505') {
+             const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+             newProfile.username = `${baseUsername}_${randomSuffix}`;
+             const retry = await supabase.from('profiles').upsert(newProfile).select().single();
+             if (retry.data) createdProfile = retry.data;
+             if (retry.error) createErr = retry.error;
+          }
+
           if (createErr) console.error("Create profile failed:", createErr);
           profile = createdProfile || newProfile;
         }
 
         if (profile) {
-          // Fix camelCase keys for profile usage if needed (though mostly handled by fetching users list)
+          // Fix camelCase keys for profile usage if needed
           if (profile.isbanned !== undefined) profile.isBanned = profile.isbanned;
 
           // CRITICAL FIX: Enforce Admin Role if email matches, even if profile existed previously as USER
@@ -224,8 +233,6 @@ const App: React.FC = () => {
               const { error: upgradeError } = await supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', session.user.id);
               if (!upgradeError) {
                   profile.role = 'ADMIN';
-              } else {
-                  console.error("Failed to upgrade admin role:", upgradeError);
               }
           }
 
@@ -578,11 +585,7 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
         });
         
         if (loginErr) throw loginErr;
-
-        // If login successful, force navigate
-        if (data.session) {
-           navigate('/shop', { replace: true });
-        }
+        // Success handled by onAuthStateChange in App.tsx
       } else {
         const { data: signupData, error: signupErr } = await supabase.auth.signUp({ 
           email: email.trim(), 
@@ -593,29 +596,13 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
         if (signupErr) throw signupErr;
         
         if (signupData.user) {
-          // Ensure profile exists immediately
-          const { error: profileError } = await supabase.from('profiles').upsert({
-            id: signupData.user.id,
-            username: username, 
-            email: email.trim(),
-            role: 'USER',
-            isBanned: false,
-            cart_data: [],
-            wishlist_data: []
-          });
-          
-          if (profileError && profileError.code === '42P01') {
-             throw new Error("خطأ نظام: جداول قاعدة البيانات غير موجودة.");
-          }
-          
           alert(t('auth_success'));
           
-          if (signupData.session) {
-             navigate('/shop', { replace: true });
-          } else {
-             // If email confirmation is required, stay on login but maybe clear form
+          if (!signupData.session) {
+             // If email confirmation is required, stay on login
              setIsLogin(true); 
           }
+          // If session exists (auto-login), navigation handled by useEffect when currentUser updates
         }
       }
     } catch (err: any) {
@@ -623,6 +610,9 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
       // Translate common error messages
       let msg = err.message;
       if (msg === "Invalid login credentials") msg = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+      if (msg?.includes("already registered")) msg = "هذا البريد الإلكتروني مسجل بالفعل";
+      if (msg?.includes("Password should be")) msg = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+      
       setError(msg || 'حدث خطأ غير متوقع');
     } finally {
       setIsLoading(false);
