@@ -407,7 +407,7 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {currentUser ? (
+              {currentUser && (
                 <div className="flex items-center gap-3">
                   <div className={`text-${dir === 'rtl' ? 'right' : 'left'}`}>
                     <span className="text-xs text-gray-500 block">{t('welcome')}</span>
@@ -415,10 +415,6 @@ const App: React.FC = () => {
                   </div>
                   <button onClick={handleLogout} className="p-2 text-red-500 hover:bg-red-900/20 rounded-full transition-colors"><LogOut size={20} /></button>
                 </div>
-              ) : (
-                <Link to="/login" className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2 shadow-blue-900/20">
-                  <LogIn size={18} /> {t('nav_login')}
-                </Link>
               )}
             </div>
           </nav>
@@ -442,9 +438,7 @@ const App: React.FC = () => {
                  <Globe size={20} /> {language === 'ar' ? 'Switch to English' : 'تغيير للعربية'}
               </button>
 
-              {!currentUser ? (
-                 <Link to="/login" className="bg-blue-600 text-white py-4 rounded-2xl mt-4 shadow-lg shadow-blue-900/20">{t('nav_login')}</Link>
-              ) : (
+              {currentUser && (
                  <button onClick={handleLogout} className="text-red-500 py-2 mt-4 font-bold flex items-center justify-center gap-2">
                     <LogOut size={20} /> {t('nav_logout')}
                  </button>
