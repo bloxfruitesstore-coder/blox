@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Product, User, Order, SiteSettings } from '../types';
-import { ShoppingCart, CheckCircle, Info, X as CloseIcon, Loader2, Zap, Star, ShieldCheck, Trophy, Sparkles, Trash2, LayoutGrid, UserCircle, ArrowUp, Heart, ShoppingBag, Globe, Copy, Instagram, MessageSquare, StickyNote, Mail } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Info, X as CloseIcon, Zap, Star, ShieldCheck, Trophy, Sparkles, Trash2, LayoutGrid, UserCircle, ArrowUp, Heart, ShoppingBag, Globe, Copy, Instagram, MessageSquare, StickyNote, Mail } from 'lucide-react';
 
 // Custom TikTok Icon
 const TikTokIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -36,7 +36,6 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   
-  const [isOrdering, setIsOrdering] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   
   // State to hold order details for the summary view
@@ -85,52 +84,46 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
         alert("يرجى تعبئة جميع البيانات المطلوبة");
         return;
     }
-    setIsOrdering(true);
     
-    try {
-      const generatedIds: string[] = [];
-      const orderItems = [...cart]; // Copy items before clearing
-      const currentTotal = orderItems.reduce((acc, curr) => acc + curr.price, 0);
+    // 1. Prepare Data
+    const generatedIds: string[] = [];
+    const orderItems = [...cart]; 
+    const currentTotal = orderItems.reduce((acc, curr) => acc + curr.price, 0);
 
-      const promises = cart.map(product => {
-        const orderId = 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        generatedIds.push(orderId);
-        
-        const newOrder: Order = {
-          id: orderId,
-          userId: currentUser?.id, // Optional, can be undefined
-          userName: currentUser?.username || 'Guest',
-          userEmail: orderEmail,
-          productId: product.id,
-          productName: product.name,
-          productPrice: product.price,
-          paymentMethod: 'ROBLOX',
-          status: 'PENDING_PAYMENT',
-          robloxUsername: robloxUsername,
-          country: country,
-          notes: notes,
-          createdAt: new Date().toISOString()
-        };
-        return onOrderCreate(newOrder);
-      });
+    const ordersToCreate = cart.map(product => {
+      const orderId = 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      generatedIds.push(orderId);
+      
+      return {
+        id: orderId,
+        userId: currentUser?.id, 
+        userName: currentUser?.username || 'Guest',
+        userEmail: orderEmail,
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+        paymentMethod: 'ROBLOX' as const,
+        status: 'PENDING_PAYMENT' as const,
+        robloxUsername: robloxUsername,
+        country: country,
+        notes: notes,
+        createdAt: new Date().toISOString()
+      };
+    });
 
-      await Promise.all(promises);
-      
-      setLastOrderInfo({
-        ids: generatedIds,
-        items: orderItems,
-        total: currentTotal
-      });
-      
-      clearCart();
-      setCheckoutStep('PLATFORM');
-      
-    } catch (err) {
-      console.error(err);
-      alert('حدث خطأ أثناء معالجة الطلبات');
-    } finally {
-      setIsOrdering(false);
-    }
+    // 2. Update UI Immediately (Instant Feedback)
+    setLastOrderInfo({
+      ids: generatedIds,
+      items: orderItems,
+      total: currentTotal
+    });
+    
+    clearCart();
+    setCheckoutStep('PLATFORM');
+    
+    // 3. Save to DB in background (Fire & Forget)
+    Promise.all(ordersToCreate.map(o => onOrderCreate(o)))
+      .catch(err => console.error("Background Save Error:", err));
   };
 
   const generateOrderText = () => {
@@ -284,13 +277,6 @@ ${itemsList}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
           <div className="bg-[#111] w-full max-w-2xl rounded-[4rem] shadow-2xl border border-gray-800 overflow-hidden relative transition-all duration-300">
-            {isOrdering && (
-               <div className="absolute inset-0 bg-[#0a0a0a]/90 backdrop-blur-md z-50 flex flex-col items-center justify-center">
-                 <Loader2 size={48} className="animate-spin text-blue-600" />
-                 <p className="mt-6 font-black text-blue-500 text-xl tracking-tighter">جاري معالجة طلبك...</p>
-               </div>
-            )}
-            
             <div className="bg-blue-600 p-10 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
               <button onClick={() => { setIsCheckoutOpen(false); setCheckoutStep('DETAILS'); }} className="absolute top-8 left-8 p-3 bg-black/20 rounded-full hover:bg-black/40 transition-colors z-20"><CloseIcon size={24} /></button>
