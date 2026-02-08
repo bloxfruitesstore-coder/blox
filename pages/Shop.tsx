@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Product, User, Order, SiteSettings } from '../types';
-import { ShoppingCart, CheckCircle, Info, X as CloseIcon, Loader2, Zap, Star, ShieldCheck, Trophy, Sparkles, Trash2, LayoutGrid, UserCircle, ArrowUp, Heart, ShoppingBag, Globe, Copy, Instagram, MessageSquare, StickyNote } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Info, X as CloseIcon, Loader2, Zap, Star, ShieldCheck, Trophy, Sparkles, Trash2, LayoutGrid, UserCircle, ArrowUp, Heart, ShoppingBag, Globe, Copy, Instagram, MessageSquare, StickyNote, Mail } from 'lucide-react';
 
 // Custom TikTok Icon
 const TikTokIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -33,6 +33,7 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
   
   const [robloxUsername, setRobloxUsername] = useState('');
   const [country, setCountry] = useState('');
+  const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
   
   const [isOrdering, setIsOrdering] = useState(false);
@@ -52,6 +53,12 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
   }, [location.state]);
 
   useEffect(() => {
+    if (currentUser?.email) {
+      setEmail(currentUser.email);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
     };
@@ -69,15 +76,15 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
       alert('عذراً، هذا المنتج غير متوفر حالياً.');
       return;
     }
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
     addToCart(product);
   };
 
   const handleSubmitOrders = async () => {
-    if (cart.length === 0 || !currentUser || !robloxUsername || !country) return;
+    const orderEmail = currentUser?.email || email;
+    if (cart.length === 0 || !robloxUsername || !country || !orderEmail) {
+        alert("يرجى تعبئة جميع البيانات المطلوبة");
+        return;
+    }
     setIsOrdering(true);
     
     try {
@@ -91,9 +98,9 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
         
         const newOrder: Order = {
           id: orderId,
-          userId: currentUser.id,
-          userName: currentUser.username,
-          userEmail: currentUser.email,
+          userId: currentUser?.id, // Optional, can be undefined
+          userName: currentUser?.username || 'Guest',
+          userEmail: orderEmail,
           productId: product.id,
           productName: product.name,
           productPrice: product.price,
@@ -127,7 +134,8 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
   };
 
   const generateOrderText = () => {
-    if (!lastOrderInfo || !currentUser) return '';
+    if (!lastOrderInfo) return '';
+    const orderEmail = currentUser?.email || email;
     
     const itemsList = lastOrderInfo.items.map(p => `- ${p.name} (${p.price > 0 ? p.price + ' R' : 'حسب الطلب'})`).join('\n');
     
@@ -135,7 +143,7 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
 ------------------
 👤 المستخدم: ${robloxUsername}
 🌍 الدولة: ${country}
-📧 الإيميل: ${currentUser.email}
+📧 الإيميل: ${orderEmail}
 
 📦 الطلبات:
 ${itemsList}
@@ -315,6 +323,10 @@ ${itemsList}
                              <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="الدولة / Country..." className="w-full px-8 py-5 pr-14 rounded-[2rem] border border-gray-700 bg-[#151515] focus:bg-[#1a1a1a] focus:border-blue-500 outline-none font-black text-right text-white placeholder-gray-600 transition-all" />
                         </div>
                         <div className="relative group">
+                             <Mail className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-500 transition-colors" size={20} />
+                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="البريد الإلكتروني..." className="w-full px-8 py-5 pr-14 rounded-[2rem] border border-gray-700 bg-[#151515] focus:bg-[#1a1a1a] focus:border-blue-500 outline-none font-black text-right text-white placeholder-gray-600 transition-all" />
+                        </div>
+                        <div className="relative group">
                              <StickyNote className="absolute right-5 top-6 text-gray-500 group-focus-within:text-blue-500 transition-colors" size={20} />
                              <textarea 
                                 value={notes} 
@@ -325,7 +337,7 @@ ${itemsList}
                         </div>
                     </div>
 
-                    <button onClick={handleSubmitOrders} disabled={!robloxUsername || !country || cart.length === 0} className="w-full bg-blue-600 text-white font-black py-6 rounded-[2.5rem] shadow-xl disabled:bg-gray-800 disabled:text-gray-600 text-lg hover:bg-blue-500 transition-all mt-4 flex items-center justify-center gap-2">
+                    <button onClick={handleSubmitOrders} disabled={!robloxUsername || !country || !email || cart.length === 0} className="w-full bg-blue-600 text-white font-black py-6 rounded-[2.5rem] shadow-xl disabled:bg-gray-800 disabled:text-gray-600 text-lg hover:bg-blue-500 transition-all mt-4 flex items-center justify-center gap-2">
                       متابعة <ArrowUp className="-rotate-90" size={20} />
                     </button>
                   </div>
