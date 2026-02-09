@@ -25,13 +25,14 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS country text;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS notes text;
 
 -- 2. Create Products Table (if not exists)
+-- Updated Constraint for Type to include 'STYLE' and 'SWORD'
 create table if not exists products (
   id text primary key,
   name text not null,
   description text,
   image text,
   price numeric not null,
-  type text check (type in ('ACCOUNT', 'FRUIT')),
+  type text check (type in ('ACCOUNT', 'STYLE', 'SWORD')),
   level integer,
   fruits text[],
   rareItems text[],
