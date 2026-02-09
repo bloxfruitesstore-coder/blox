@@ -92,9 +92,9 @@ const App: React.FC = () => {
       const sPromise = supabase.from('site_settings').select('*').single();
       const uPromise = supabase.from('profiles').select('*');
 
-      // Create a timeout promise (7 seconds)
+      // Create a timeout promise (15 seconds)
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Database connection timed out")), 7000)
+        setTimeout(() => reject(new Error("Database connection timed out")), 15000)
       );
 
       // Race the data fetch against the timeout
@@ -153,7 +153,8 @@ const App: React.FC = () => {
          setUsers(mappedUsers as User[]);
       }
     } catch (err) {
-      console.error("Error loading data from Supabase (or timeout):", err);
+      console.warn("Supabase fetch skipped or timed out. Using local data.");
+      // Fallback to initial products without showing a scary error in UI if it's just a timeout/connection issue
       setProducts(INITIAL_PRODUCTS);
     } finally {
       setIsLoading(false);
@@ -177,7 +178,7 @@ const App: React.FC = () => {
   useEffect(() => {
     fetchInitialData();
     
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = (supabase.auth as any).onAuthStateChange(async (event: any, session: any) => {
       if (session) {
         const isAdminEmail = session.user.email?.toLowerCase() === 'asmar1samar2@gmail.com';
         
@@ -249,7 +250,7 @@ const App: React.FC = () => {
           }
 
           if (profile.isBanned) {
-            await supabase.auth.signOut();
+            await (supabase.auth as any).signOut();
             setCurrentUser(null);
             alert('حسابك محظور');
           } else {
@@ -291,7 +292,7 @@ const App: React.FC = () => {
             supabase.from('profiles').update({ wishlist_data: wishlist }).eq('id', currentUser.id)
         ]);
     }
-    await supabase.auth.signOut();
+    await (supabase.auth as any).signOut();
     setCurrentUser(null);
     setIsCartOpen(false);
     setCart([]);
@@ -485,7 +486,7 @@ const App: React.FC = () => {
                       </button>
                       <div className={`flex-1 ${dir === 'rtl' ? 'text-right' : 'text-left'}`}>
                         <h4 className="font-black text-white text-sm">{item.name}</h4>
-                        <p className="text-xs text-gray-500 mt-1">{item.type === 'ACCOUNT' ? t('account') : t('fruit')}</p>
+                        <p className="text-xs text-gray-500 mt-1">{item.type === 'ACCOUNT' ? t('account') : item.type === 'STYLE' ? t('style') : t('sword')}</p>
                         <p className="text-lg font-black text-green-500 mt-2">{item.price > 0 ? `${item.price} Robux` : t('cart_custom_price')}</p>
                       </div>
                       <img src={item.image} alt={item.name} className="w-20 h-20 rounded-2xl object-cover shadow-sm border border-gray-700" />
@@ -569,7 +570,7 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
     
     try {
       if (isLogin) {
-        const { data, error: loginErr } = await supabase.auth.signInWithPassword({ 
+        const { data, error: loginErr } = await (supabase.auth as any).signInWithPassword({ 
             email: email.trim(), 
             password: password.trim() 
         });
@@ -580,7 +581,7 @@ const Auth: React.FC<{ setCurrentUser: (u: User | null) => void; currentUser: Us
            navigate('/shop', { replace: true });
         }
       } else {
-        const { data: signupData, error: signupErr } = await supabase.auth.signUp({ 
+        const { data: signupData, error: signupErr } = await (supabase.auth as any).signUp({ 
           email: email.trim(), 
           password: password.trim(), 
           options: { data: { username: username, full_name: username } } 
