@@ -58,7 +58,7 @@ const WishlistPage: React.FC<WishlistProps> = ({ products, wishlist, toggleWishl
                       <Trash2 size={20} />
                     </button>
                     <div className="absolute top-6 right-6 bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl text-[10px] font-black text-white shadow-xl border border-white/10">
-                      {product.type === 'ACCOUNT' ? 'ACCOUNT' : 'FRUIT'}
+                      {product.type === 'ACCOUNT' ? 'ACCOUNT' : product.type === 'STYLE' ? 'STYLE' : 'SWORD'}
                     </div>
                   </div>
 
