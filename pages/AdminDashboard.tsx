@@ -148,7 +148,7 @@ const AdminDashboard: React.FC<AdminProps> = ({
   };
 
   const handleRestoreDefaults = async () => {
-    if (!window.confirm('تحذير: هذا سيقوم بحذف جميع المنتجات الحالية في قاعدة البيانات واستبدالها بالقائمة الافتراضية الكاملة (فواكه وحسابات). هل أنت متأكد؟')) return;
+    if (!window.confirm('تحذير: هذا سيقوم بحذف جميع المنتجات الحالية واستبدالها بالقائمة الافتراضية (الحسابات، الأساليب، والسيوف). هل أنت متأكد؟')) return;
     setIsProcessing(true);
     try {
         // 1. Delete all products
@@ -713,7 +713,8 @@ const AdminDashboard: React.FC<AdminProps> = ({
                 <label className="text-xs font-bold text-gray-500 mb-2 block mr-2">النوع</label>
                 <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} className="w-full px-5 py-3 rounded-2xl bg-[#1a1a1a] border border-gray-800 outline-none focus:border-blue-600 text-white">
                   <option value="ACCOUNT">حساب (Account)</option>
-                  <option value="FRUIT">فاكهة (Fruit)</option>
+                  <option value="STYLE">أسلوب (Style)</option>
+                  <option value="SWORD">سيف (Sword)</option>
                 </select>
               </div>
               
