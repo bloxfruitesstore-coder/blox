@@ -35,7 +35,7 @@ const translations: Record<Language, Record<string, string>> = {
     hero_badge: "متجر بلوكس فروت الموثوق",
     hero_title: "امتلك أقوى حسابات",
     hero_subtitle: "Blox Store",
-    hero_desc: "وجهتك الأولى والموثوقة لامتلاك أقوى حسابات وفواكه Blox Fruits بأمان وسرعة خيالية.",
+    hero_desc: "وجهتك الأولى والموثوقة لامتلاك أقوى حسابات وأساليب Blox Fruits بأمان وسرعة خيالية.",
     hero_cta: "تصفح المتجر الآن 🛒",
     sect_guaranteed: "مضمونة 100%",
     sect_accounts: "حسابات Blox Fruits نادرة",
@@ -54,7 +54,8 @@ const translations: Record<Language, Record<string, string>> = {
     switch_to_login: "ادخل بحسابك",
     auth_success: "تم التسجيل بنجاح! جاري تسجيل الدخول...",
     account: "حساب",
-    fruit: "فاكهة",
+    style: "أسلوب قتالي",
+    sword: "سيف أسطوري",
   },
   en: {
     nav_home: "Home",
@@ -80,7 +81,7 @@ const translations: Record<Language, Record<string, string>> = {
     hero_badge: "Trusted Blox Fruits Store",
     hero_title: "Own the Strongest",
     hero_subtitle: "Blox Store Accounts",
-    hero_desc: "Your #1 trusted destination to own the strongest Blox Fruits accounts and fruits safely and instantly.",
+    hero_desc: "Your #1 trusted destination to own the strongest Blox Fruits accounts and fighting styles safely and instantly.",
     hero_cta: "Browse Shop Now 🛒",
     sect_guaranteed: "100% Guaranteed",
     sect_accounts: "Rare Blox Fruits Accounts",
@@ -99,7 +100,8 @@ const translations: Record<Language, Record<string, string>> = {
     switch_to_login: "Login to Account",
     auth_success: "Registered Successfully! Logging in...",
     account: "Account",
-    fruit: "Fruit",
+    style: "Fighting Style",
+    sword: "Legendary Sword",
   }
 };
 
