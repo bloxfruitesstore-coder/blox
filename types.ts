@@ -1,5 +1,5 @@
 
-export type ProductType = 'ACCOUNT' | 'FRUIT';
+export type ProductType = 'ACCOUNT' | 'STYLE' | 'SWORD';
 export type PaymentMethod = 'ROBLOX';
 export type OrderStatus = 'NEW' | 'PENDING_PAYMENT' | 'PENDING_DELIVERY' | 'DELIVERED';
 
