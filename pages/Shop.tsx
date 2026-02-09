@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Product, User, Order, SiteSettings } from '../types';
-import { ShoppingCart, CheckCircle, Info, X as CloseIcon, Zap, Star, ShieldCheck, Trophy, Sparkles, Trash2, LayoutGrid, UserCircle, ArrowUp, Heart, ShoppingBag, Globe, Copy, Instagram, MessageSquare, StickyNote, Mail } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Info, X as CloseIcon, Swords, Star, ShieldCheck, Trophy, Sparkles, Trash2, LayoutGrid, UserCircle, ArrowUp, Heart, ShoppingBag, Globe, Copy, Instagram, MessageSquare, StickyNote, Mail, Sword } from 'lucide-react';
 
 // Custom TikTok Icon
 const TikTokIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -27,7 +27,7 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [filter, setFilter] = useState<'ALL' | 'ACCOUNT' | 'FRUIT'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'ACCOUNT' | 'STYLE' | 'SWORD'>('ALL');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'DETAILS' | 'PLATFORM'>('DETAILS');
   
@@ -70,7 +70,7 @@ const Shop: React.FC<ShopProps> = ({ products, currentUser, cart, addToCart, cle
   };
 
   const handleAddToCart = (product: Product) => {
-    const isOutOfStock = !product.inStock || (product.type === 'FRUIT' && product.stockQuantity <= 0);
+    const isOutOfStock = !product.inStock || ((product.type === 'STYLE' || product.type === 'SWORD') && product.stockQuantity <= 0);
     if (isOutOfStock) {
       alert('عذراً، هذا المنتج غير متوفر حالياً.');
       return;
@@ -173,14 +173,15 @@ ${itemsList}
           سوق <span className="text-blue-600 drop-shadow-[0_0_10px_rgba(37,99,235,0.5)]">Blox Fruits</span>
         </h1>
         <p className="text-gray-500 font-bold max-w-2xl mx-auto leading-relaxed">
-          حسابات ليفل ماكس، فواكه نادرة، وسيوف أسطورية. تسليم آمن وسريع 100%.
+          حسابات ليفل ماكس، وأساليب قتالية، وسيوف نادرة. تسليم آمن وسريع 100%.
         </p>
       </div>
 
-      <div className="max-w-7xl mx-auto mb-12 flex justify-center gap-4">
+      <div className="max-w-7xl mx-auto mb-12 flex flex-wrap justify-center gap-4">
         <button onClick={() => setFilter('ALL')} className={`px-8 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 ${filter === 'ALL' ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' : 'bg-[#111] text-gray-500 hover:bg-[#1a1a1a]'}`}><LayoutGrid size={18} /> الكل</button>
-        <button onClick={() => setFilter('ACCOUNT')} className={`px-8 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 ${filter === 'ACCOUNT' ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.3)]' : 'bg-[#111] text-gray-500 hover:bg-[#1a1a1a]'}`}><UserCircle size={18} /> قسم الحسابات</button>
-        <button onClick={() => setFilter('FRUIT')} className={`px-8 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 ${filter === 'FRUIT' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'bg-[#111] text-gray-500 hover:bg-[#1a1a1a]'}`}><Zap size={18} /> قسم الفواكه</button>
+        <button onClick={() => setFilter('ACCOUNT')} className={`px-8 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 ${filter === 'ACCOUNT' ? 'bg-orange-600 text-white shadow-[0_0_15px_rgba(234,88,12,0.3)]' : 'bg-[#111] text-gray-500 hover:bg-[#1a1a1a]'}`}><UserCircle size={18} /> الحسابات</button>
+        <button onClick={() => setFilter('STYLE')} className={`px-8 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 ${filter === 'STYLE' ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]' : 'bg-[#111] text-gray-500 hover:bg-[#1a1a1a]'}`}><Swords size={18} /> الأساليب</button>
+        <button onClick={() => setFilter('SWORD')} className={`px-8 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 ${filter === 'SWORD' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'bg-[#111] text-gray-500 hover:bg-[#1a1a1a]'}`}><Sword size={18} /> السيوف</button>
       </div>
 
       <div className="max-w-7xl mx-auto min-h-[400px]">
@@ -195,15 +196,28 @@ ${itemsList}
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {filteredProducts.map((product) => {
-              const isOutOfStock = !product.inStock || (product.type === 'FRUIT' && product.stockQuantity <= 0);
+              const isOutOfStock = !product.inStock || ((product.type === 'STYLE' || product.type === 'SWORD') && product.stockQuantity <= 0);
               const isInCart = cart.some(p => p.id === product.id);
               const isWishlisted = wishlist.includes(product.id);
               
               const getButtonText = () => {
                 if (isOutOfStock) return 'نفذ';
                 if (isInCart) return 'في السلة';
-                return product.type === 'ACCOUNT' ? 'Buy Account' : 'Buy Fruit';
+                if (product.type === 'ACCOUNT') return 'Buy Account';
+                if (product.type === 'STYLE') return 'Buy Style';
+                return 'Buy Sword';
               };
+
+              // Determine color scheme based on type
+              const getTypeColor = () => {
+                 if (product.type === 'ACCOUNT') return 'bg-orange-600';
+                 if (product.type === 'STYLE') return 'bg-red-600';
+                 if (product.type === 'SWORD') return 'bg-purple-600';
+                 return 'bg-blue-600';
+              };
+              
+              const typeColorClass = getTypeColor();
+              const badgeText = product.type === 'ACCOUNT' ? 'حساب أسطوري' : product.type === 'STYLE' ? 'أسلوب قتالي' : 'سيف نادر';
 
               return (
                 <div key={product.id} className={`group relative bg-[#0a0a0a] rounded-[3.5rem] border border-gray-800 shadow-lg transition-all duration-500 hover:border-blue-900/50 hover:shadow-[0_0_30px_rgba(37,99,235,0.15)] hover:-translate-y-3 flex flex-col ${isOutOfStock ? 'opacity-60 grayscale' : ''}`}>
@@ -219,9 +233,9 @@ ${itemsList}
                     </button>
 
                     <div className="absolute top-6 right-6 flex flex-col gap-2 items-end">
-                      <div className={`backdrop-blur px-5 py-2 rounded-2xl text-[10px] font-black shadow-xl flex items-center gap-2 border border-white/10 ${product.type === 'ACCOUNT' ? 'bg-orange-600/90 text-white' : 'bg-black/80 text-blue-400'}`}>
+                      <div className={`backdrop-blur px-5 py-2 rounded-2xl text-[10px] font-black shadow-xl flex items-center gap-2 border border-white/10 ${product.type === 'ACCOUNT' ? 'bg-orange-600/90 text-white' : product.type === 'STYLE' ? 'bg-red-600/80 text-white' : 'bg-purple-600/80 text-white'}`}>
                          <ShieldCheck size={14} />
-                         {product.type === 'ACCOUNT' ? 'حساب أسطوري' : 'فاكهة نادرة'}
+                         {badgeText}
                       </div>
                     </div>
 
@@ -257,7 +271,7 @@ ${itemsList}
                         )}
                       </div>
 
-                      <button onClick={() => handleAddToCart(product)} disabled={isOutOfStock || isInCart} className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl ${isOutOfStock ? 'bg-[#151515] text-gray-600 cursor-not-allowed shadow-none' : isInCart ? 'bg-green-900/20 text-green-500 border border-green-900/50' : product.type === 'ACCOUNT' ? 'bg-orange-600 text-white hover:bg-orange-500' : 'bg-blue-600 text-white hover:bg-blue-500'}`}>
+                      <button onClick={() => handleAddToCart(product)} disabled={isOutOfStock || isInCart} className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all flex items-center justify-center gap-3 shadow-xl ${isOutOfStock ? 'bg-[#151515] text-gray-600 cursor-not-allowed shadow-none' : isInCart ? 'bg-green-900/20 text-green-500 border border-green-900/50' : `${typeColorClass} text-white hover:opacity-90`}`}>
                         {isInCart ? <CheckCircle size={20} /> : <ShoppingCart size={20} />}
                         {getButtonText()}
                       </button>
